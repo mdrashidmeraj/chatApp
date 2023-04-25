@@ -21,6 +21,23 @@ io.on('connection', (socket) => {
 
     socket.emit('message', 'Welcome!');
 
+    socket.broadcast.emit('message', 'A new user has joined!'); // to all except the current user
+
+    socket.on('sendMessage', (message, cb) => {
+        console.log(message);
+        io.emit('message', message);
+        cb("Delivered");    // to acknowledge the event
+    });
+
+    socket.on('sendLocation', (coords) => {
+        console.log(coords);
+        io.emit('message', `https://google.com/maps?q=${coords.latitude},${coords.longitude}`);
+    });
+
+    socket.on('disconnect', () => {    // when a user disconnects
+        io.emit('message', 'A user has left!');
+    });
+
 });
 
 server.listen(port, () => {
