@@ -3,6 +3,8 @@ import express from 'express';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Filter from 'bad-words';
+import { generateMessage, locationGenerateMessage } from './utils/messages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,23 +21,27 @@ app.use(express.static(publicDirectoryPath));
 io.on('connection', (socket) => {
     console.log('New WebSocket connection');
 
-    socket.emit('message', 'Welcome!');
+    socket.emit('message', generateMessage('Welcome!')); // to the current user
 
-    socket.broadcast.emit('message', 'A new user has joined!'); // to all except the current user
+    socket.broadcast.emit('message', generateMessage('A new user has joined!')); // to all except the current user
 
     socket.on('sendMessage', (message, cb) => {
-        console.log(message);
-        io.emit('message', message);
+        const filter = new Filter();
+        if (filter.isProfane(message)) {
+            return cb('Profanity is not allowed!');
+        }
+        io.emit('message', generateMessage(message));
         cb("Delivered");    // to acknowledge the event
     });
 
-    socket.on('sendLocation', (coords) => {
+    socket.on('sendLocation', (coords, cb) => {
         console.log(coords);
-        io.emit('message', `https://google.com/maps?q=${coords.latitude},${coords.longitude}`);
+        io.emit('locationMessage', locationGenerateMessage(`https://google.com/maps?q=${coords.latitude},${coords.longitude}`));
+        cb();
     });
 
     socket.on('disconnect', () => {    // when a user disconnects
-        io.emit('message', 'A user has left!');
+        io.emit('message', generateMessage('A user has left!'));
     });
 
 });
